@@ -2,8 +2,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public class HostAddress {
-    private InetAddress address;
-    private int port;
+    private final InetAddress address;
+    private final int port;
 
     public HostAddress(String address, int port) throws UnknownHostException {
         this.address = InetAddress.getByName(address);

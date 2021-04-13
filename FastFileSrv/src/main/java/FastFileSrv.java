@@ -1,5 +1,3 @@
-import org.apache.commons.lang3.SerializationUtils;
-
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -7,9 +5,13 @@ import java.net.SocketException;
 import java.nio.file.Files;
 
 public class FastFileSrv {
+    private final static int BUFFER_SIZE = 256;
+
+    private final RequestedFiles files;
     private final DatagramSocket socket;
 
     public FastFileSrv() throws SocketException {
+        files = new RequestedFiles();
         socket = new DatagramSocket(4445);
     }
 
@@ -19,51 +21,55 @@ public class FastFileSrv {
 
     public void sendMessage(Message msg, HostAddress address) throws IOException {
         System.out.println(msg);
-        byte[] buffer = SerializationUtils.serialize(msg);
+        byte[] buffer = msg.serialize();
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address.getAddress(), address.getPort());
         sendPacket(packet);
     }
 
     public DatagramPacket receivePacket() throws IOException {
-        byte[] buffer = new byte[256];
+        byte[] buffer = new byte[BUFFER_SIZE];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         socket.receive(packet);
         return packet;
     }
 
     public Message receiveMessage(DatagramPacket packet) throws ClassNotFoundException {
-        return SerializationUtils.deserialize(packet.getData());
+        return Message.deserialize(packet.getData());
     }
 
-    public Message getFileSize(String filename) {
+    public Message getFileSize(Message input) {
+        files.put(input.getFile_hash(), input.getFilename());
+
         long size;
         try {
-            size = Files.size(new File(filename).toPath());
+            size = Files.size(new File(input.getFilename()).toPath());
         } catch (IOException e) {
             return Message.newErrorMessage("file-does-not-exist");
         }
-        return Message.newFileSizeResponse(filename, size);
+        return Message.newFileSizeResponse(input.getFile_hash(), size);
     }
 
-    public Message getFileChunk(String filename, long begin, long end) {
+    public Message getFileChunk(Message message) {
+        String filename = files.getFile(message.getFile_hash());
+
         RandomAccessFile f;
-        int range = Math.toIntExact(end - begin);
+        int range = (int) (message.getChunk_end() - message.getChunk_start() + 1);
         byte[] buffer = new byte[range];
         try {
             f = new RandomAccessFile(filename,"r");
-            f.seek(Math.toIntExact(begin));
+            f.seek(message.getChunk_start());
             f.read(buffer, 0, range);
         } catch (IOException | IndexOutOfBoundsException e) {
             return Message.newErrorMessage("file-does-not-exist");
         }
 
-        return Message.newChunkResponse(filename, begin, end, buffer);
+        return Message.newChunkResponse(message.getFile_hash(), message.getChunk_number(), buffer);
     }
 
     public void parseInput(Message input, HostAddress hostAddress) throws IOException {
         Message message = switch (input.getQuery_type()) {
-            case "t" -> getFileSize(input.getFilename());
-            case "c" -> getFileChunk(input.getFilename(), input.getChunk_start(), input.getChunk_end());
+            case 'f' -> getFileSize(input);
+            case 'c' -> getFileChunk(input);
             default -> Message.newErrorMessage("unexpected-request");
         };
 
@@ -78,7 +84,7 @@ public class FastFileSrv {
 
             HostAddress hostAddress = new HostAddress(packet.getAddress(), packet.getPort());
 
-            Message in = null;
+            Message in;
             try {
                 in = receiveMessage(packet);
                 System.out.println(in);
