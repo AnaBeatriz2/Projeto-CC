@@ -113,15 +113,20 @@ public class HttpGw {
     public void requestFile(String input) throws IOException, ClassNotFoundException {
         String fileHash = files.addFile(input);
 
+
         //1-> pedir tamanho do ficheiro
         Message file_size = getFileSize(fileHash, input, hostAddresses.get(0));
 
-        //2-> dividir em chunks e pedir os respetivos chunks
-        long chunks = requestChunks(file_size.getSize(), fileHash);
+        if (file_size.getQuery_type() != 'e') {
+            //2-> dividir em chunks e pedir os respetivos chunks
+            long chunks = requestChunks(file_size.getSize(), fileHash);
 
-        //3-> receber os dados em chunks e compilar numa lista
-        Map<Long, byte[]> data = receiveChunks(chunks, fileHash);
-        writeToFile(input, data);
+            //3-> receber os dados em chunks e compilar numa lista
+            Map<Long, byte[]> data = receiveChunks(chunks, fileHash);
+            writeToFile(input, data);
+        } else {
+            System.out.println("Requested file does not exist.");
+        }
     }
 
     private void writeToFile(String filename, Map<Long, byte[]> data) throws IOException {
@@ -140,13 +145,13 @@ public class HttpGw {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
         while (true) {
-            System.out.print(">>");
+            System.out.print(">> ");
             String in = reader.readLine();
 
             try {
                 requestFile(in);
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                System.out.println();
             }
 
             if (in.equals("end")) {

@@ -1,7 +1,6 @@
 import com.google.common.primitives.Bytes;
 
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class Message implements Serializable {
