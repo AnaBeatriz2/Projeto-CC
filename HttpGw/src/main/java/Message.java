@@ -1,35 +1,25 @@
 import com.google.common.primitives.Bytes;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.Arrays;
 
 public class Message implements Serializable {
-    private byte query_type; // size: 1 + 1
+    public final static int BUFFER_SIZE = 256;
 
-    private String file_hash; // size: 4 + 1
-    private String filename; // size: ? max -> HttpGw.BUFFER_SIZE - 5 - 1
-    private long size; // size: ? but not a problem for 256 plus buffer
-
-    private long chunk_number; // size: ? but not a problem for 256 plus buffer
-    private long chunk_start; // size: ? but not a problem for 256 plus buffer
-    private long chunk_end; // size: ? but not a problem for 256 plus buffer
-
-    private byte[] data; // size: ? max -> HttpGw.BUFFER_SIZE - 15
-
-    private String error_message; // size: ? max HttpGw.BUFFER_SIZE - 1 - 1
-
-    public static Message newFileSizeRequest(String file_hash, String filename) {
+    public static Message newFileSizeRequest(String filename) {
         Message message = new Message();
         message.query_type = 'f';
-        message.file_hash = file_hash;
         message.filename = filename;
         return message;
     }
 
-    public static Message newFileSizeResponse(String file_hash, long size) {
+    public static Message newFileSizeResponse(String filename, long size) { // check usages
         Message message = new Message();
         message.query_type = 's';
-        message.file_hash = file_hash;
+        message.filename = filename;
         message.size = size;
         return message;
     }
@@ -41,31 +31,62 @@ public class Message implements Serializable {
         return message;
     }
 
-    public static Message newChunkRequest(String file_hash, long chunk_number, long chunk_start, long chunk_end) {
+    public static Message newChunkRequest(Chunk chunk) {
         Message message = new Message();
         message.query_type = 'c';
-        message.file_hash = file_hash;
-        message.chunk_number = chunk_number;
-        message.chunk_start = chunk_start;
-        message.chunk_end = chunk_end;
+        message.filename = chunk.getFilename();
+        message.chunk_number = chunk.getChunk();
+        message.chunk_start = chunk.getStart();
+        message.chunk_end = chunk.getEnd();
         return message;
     }
 
-    public static Message newChunkResponse(String file_hash, long chunk_number, byte[] data) {
+    public static Message newChunkResponse(String filename, long chunk_number, byte[] data) {
         Message message = new Message();
         message.query_type = 'd';
-        message.file_hash = file_hash;
+        message.filename = filename;
         message.chunk_number = chunk_number;
         message.data = data;
         return message;
     }
 
-    public byte getQuery_type() {
-        return query_type;
+    private byte query_type; // size: 1 + 1
+
+    private String filename; // size: ? max -> HttpGw.BUFFER_SIZE - 5 - 1
+    private long size; // size: ? but not a problem for 256 plus buffer
+
+    private long chunk_number; // size: ? but not a problem for 256 plus buffer
+    private long chunk_start; // size: ? but not a problem for 256 plus buffer
+    private long chunk_end; // size: ? but not a problem for 256 plus buffer
+
+    private byte[] data; // size: ? max -> HttpGw.BUFFER_SIZE - 15
+
+    private String error_message; // size: ? max HttpGw.BUFFER_SIZE - 1 - 1
+
+    public static void sendPacket(DatagramSocket socket, DatagramPacket packet) throws IOException {
+        socket.send(packet);
     }
 
-    public String getFile_hash() {
-        return file_hash;
+    public static void sendMessage(Message msg, HostAddress address, DatagramSocket socket) throws IOException {
+        byte[] buffer = msg.serialize();
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address.getAddress(), address.getPort());
+        sendPacket(socket, packet);
+    }
+
+    public static DatagramPacket receivePacket(DatagramSocket socket) throws IOException {
+        byte[] buffer = new byte[BUFFER_SIZE];
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        socket.receive(packet);
+        return packet;
+    }
+
+    public static Message receiveMessage(DatagramSocket socket) throws IOException {
+        DatagramPacket packet = receivePacket(socket);
+        return Message.deserialize(packet.getData());
+    }
+
+    public byte getQuery_type() {
+        return query_type;
     }
 
     public String getFilename() {
@@ -108,22 +129,22 @@ public class Message implements Serializable {
     }
 
     private byte[] serializeFileSizeRequest() {
-        String t = ";" + file_hash + ";" + filename + ";";
+        String t = ";" + filename + ";";
         return Bytes.concat(new byte[]{query_type}, t.getBytes());
     }
 
     private byte[] serializeFileSizeResponse() {
-        String t = ";" + file_hash + ";" + size + ";";
+        String t = ";" + filename + ";" + size + ";";
         return Bytes.concat(new byte[]{query_type}, t.getBytes());
     }
 
     private byte[] serializeChunkRequest() {
-        String t =";" + file_hash + ";" + chunk_number + ";" + chunk_start + ";" + chunk_end + ";";
+        String t =";" + filename + ";" + chunk_number + ";" + chunk_start + ";" + chunk_end + ";";
         return Bytes.concat(new byte[]{query_type}, t.getBytes());
     }
 
     private byte[] serializeChunkResponse() {
-        String t = ";" + file_hash + ";" + Long.toString(chunk_number).length() + ";" + chunk_number + ";";
+        String t = ";" + filename.length() + ";" + filename + ";" + Long.toString(chunk_number).length() + ";" + chunk_number + ";";
         return Bytes.concat(new byte[]{query_type}, t.getBytes(), data);
     }
 
@@ -148,8 +169,7 @@ public class Message implements Serializable {
         String[] ts = t.split(";");
         Message m = new Message();
         m.query_type = 'f';
-        m.file_hash = ts[0];
-        m.filename = ts[1];
+        m.filename = ts[0];
         return m;
     }
 
@@ -158,7 +178,7 @@ public class Message implements Serializable {
         String[] ts = t.split(";");
         Message m = new Message();
         m.query_type = 's';
-        m.file_hash = ts[0];
+        m.filename = ts[0];
         m.size = Long.parseLong(ts[1]);
         return m;
     }
@@ -168,7 +188,7 @@ public class Message implements Serializable {
         String[] ts = t.split(";");
         Message m = new Message();
         m.query_type = 'c';
-        m.file_hash = ts[0];
+        m.filename = ts[0];
         m.chunk_number = Long.parseLong(ts[1]);
         m.chunk_start = Long.parseLong(ts[2]);
         m.chunk_end = Long.parseLong(ts[3]);
@@ -184,14 +204,28 @@ public class Message implements Serializable {
             }
         }
 
-        String fileHash = new String(Arrays.copyOfRange(data, 2, 6));
-        int chunkNumberSize = Integer.parseInt(new String(Arrays.copyOfRange(data, 7, 8)));
-        long chunkNumber = Long.parseLong(new String(Arrays.copyOfRange(data, 9, 9 + chunkNumberSize)));
-        byte[] content = Arrays.copyOfRange(data, 10 + chunkNumberSize, usefulSize);
+        int from = 2, to = 4;
+        int filenameSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
+
+        from = 5;
+        to = 5 + filenameSize;
+        String filename = new String(Arrays.copyOfRange(data, from, to));
+
+        from = to + 1;
+        to = from + 1;
+        int chunkNumberSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
+
+        from = to + 1;
+        to = from + chunkNumberSize;
+        long chunkNumber = Long.parseLong(new String(Arrays.copyOfRange(data, from, to)));
+
+        from = to + 1;
+        to = usefulSize;
+        byte[] content = Arrays.copyOfRange(data, from, to);
 
         Message m = new Message();
         m.query_type = 'd';
-        m.file_hash = fileHash;
+        m.filename = filename;
         m.chunk_number = chunkNumber;
         m.data = content;
         return m;
@@ -210,7 +244,6 @@ public class Message implements Serializable {
     public String toString() {
         return "Message{" +
                 "query_type=" + query_type +
-                ", file_hash='" + file_hash + '\'' +
                 ", filename='" + filename + '\'' +
                 ", chunk_start=" + chunk_start +
                 ", chunk_end=" + chunk_end +
