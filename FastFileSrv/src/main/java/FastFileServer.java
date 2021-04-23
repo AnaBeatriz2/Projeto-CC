@@ -1,12 +1,13 @@
+
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-public class FastFileSrv {
+public class FastFileServer {
     private final DatagramSocket socket;
 
-    public FastFileSrv() throws SocketException {
+    public FastFileServer() throws SocketException {
         socket = new DatagramSocket(4445);
     }
 
@@ -22,7 +23,7 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
-        FastFileSrv fastFileSrv = new FastFileSrv();
-        fastFileSrv.run();
+        FastFileServer fastFileServer = new FastFileServer();
+        fastFileServer.run();
     }
 }

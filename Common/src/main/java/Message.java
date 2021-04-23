@@ -1,3 +1,5 @@
+
+
 import com.google.common.primitives.Bytes;
 
 import java.io.IOException;
@@ -58,6 +60,11 @@ public class Message implements Serializable {
         byte[] buffer = msg.serialize();
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address.getAddress(), address.getPort());
         sendPacket(socket, packet);
+    }
+
+    public static Message receiveMessage(DatagramSocket socket) throws IOException {
+        DatagramPacket packet = receivePacket(socket);
+        return Message.deserialize(packet.getData());
     }
 
     public static DatagramPacket receivePacket(DatagramSocket socket) throws IOException {
@@ -203,16 +210,16 @@ public class Message implements Serializable {
             }
         }
 
-        int from = 2, to = 3;
+        int from = 2, to = 4;
         int filenameSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
 
-        from = 4;
-        to = 4 + filenameSize;
+        from = 5;
+        to = 5 + filenameSize;
         String filename = new String(Arrays.copyOfRange(data, from, to));
 
         from = to + 1;
-        to = from + 2;
-        int chunkNumberSize = Integer.parseInt(new String(Arrays.copyOfRange(data, 7, 8)));
+        to = from + 1;
+        int chunkNumberSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
 
         from = to + 1;
         to = from + chunkNumberSize;
@@ -241,7 +248,7 @@ public class Message implements Serializable {
 
     @Override
     public String toString() {
-        return "Message{" +
+        return "common.Message{" +
                 "query_type=" + query_type +
                 ", filename='" + filename + '\'' +
                 ", chunk_start=" + chunk_start +
