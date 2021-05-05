@@ -9,7 +9,7 @@ import java.net.DatagramSocket;
 import java.util.Arrays;
 
 public class Message implements Serializable {
-    public final static int BUFFER_SIZE = 256;
+    public final static int BUFFER_SIZE = 512;
 
     public static Message newFileSizeRequest(String filename) {
         Message message = new Message();
@@ -150,7 +150,9 @@ public class Message implements Serializable {
     }
 
     private byte[] serializeChunkResponse() {
-        String t = ";" + filename.length() + ";" + filename + ";" + Long.toString(chunk_number).length() + ";" + chunk_number + ";";
+        String t = ";" + filename.length() + ";" + filename + ";" +
+                Long.toString(chunk_number).length() + ";" + chunk_number + ";" +
+                Long.toString(data.length).length() + ";" + data.length + ";";
         return Bytes.concat(new byte[]{query_type}, t.getBytes(), data);
     }
 
@@ -202,14 +204,6 @@ public class Message implements Serializable {
     }
 
     private static Message deserializeChunkResponse(byte[] data) {
-        int usefulSize = 0;
-
-        for (; usefulSize < data.length; usefulSize++) {
-            if (data[usefulSize] == '\0') {
-                break;
-            }
-        }
-
         int from = 2, to = 4;
         int filenameSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
 
@@ -226,7 +220,15 @@ public class Message implements Serializable {
         long chunkNumber = Long.parseLong(new String(Arrays.copyOfRange(data, from, to)));
 
         from = to + 1;
-        to = usefulSize;
+        to = from + 1;
+        int dataNumberSize = Integer.parseInt(new String(Arrays.copyOfRange(data, from, to)));
+
+        from = to + 1;
+        to = from + dataNumberSize;
+        int dataSize = (int) Long.parseLong(new String(Arrays.copyOfRange(data, from, to)));
+
+        from = to + 1;
+        to = from + dataSize;
         byte[] content = Arrays.copyOfRange(data, from, to);
 
         Message m = new Message();

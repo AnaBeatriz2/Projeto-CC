@@ -1,4 +1,6 @@
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -40,5 +42,21 @@ public class OrderedChunks {
         boolean hasAll = this.chunks == this.received_chunks;
         reentrantLock.unlock();
         return hasAll;
+    }
+
+    public List<Long> missingChunks() {
+        List<Long> missingChunks = new ArrayList<>();
+
+        reentrantLock.lock();
+
+        for (long i = 0; i < chunks; i++) {
+            if (!ordered_chunks.containsKey(i)) {
+                missingChunks.add(i);
+            }
+        }
+
+        reentrantLock.unlock();
+
+        return missingChunks;
     }
 }

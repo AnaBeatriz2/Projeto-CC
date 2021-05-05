@@ -1,9 +1,9 @@
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class RequestHandler implements Runnable{
     private final DatagramPacket packet;
@@ -25,13 +25,20 @@ public class RequestHandler implements Runnable{
     }
 
     public Message getFileChunk(Message message) {
-        RandomAccessFile f;
+        FileInputStream f;
         int range = (int) (message.getChunk_end() - message.getChunk_start() + 1);
         byte[] buffer = new byte[range];
+
         try {
-            f = new RandomAccessFile(message.getFilename(),"r");
-            f.seek(message.getChunk_start());
-            f.read(buffer, 0, range);
+            f = new FileInputStream(message.getFilename());
+            long s = f.skip(message.getChunk_start());
+            if (s != message.getChunk_start()) {
+                System.out.println("Skipped " + s + " of " + message.getChunk_start());
+            }
+            long r = f.read(buffer, 0, range);
+            if (r != range) {
+                System.out.println("(" + message.getChunk_number() + ") Read " + r + " of " + range);
+            }
         } catch (IOException | IndexOutOfBoundsException e) {
             return Message.newErrorMessage("file-does-not-exist");
         }
@@ -55,7 +62,6 @@ public class RequestHandler implements Runnable{
         Message in;
         try {
             in = Message.receiveMessage(packet);
-            System.out.println(in);
             parseInput(in, hostAddress);
         } catch (ClassNotFoundException ignored) {} catch (IOException e) {
             e.printStackTrace();
