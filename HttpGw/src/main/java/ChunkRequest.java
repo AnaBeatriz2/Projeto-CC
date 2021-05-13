@@ -1,26 +1,17 @@
-
-
 import java.io.IOException;
 import java.net.DatagramSocket;
-import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class ChunkRequest implements Runnable{
-    private final List<HostAddress> hostAddresses;
+    private final HostAddresses hostAddresses;
     private final Chunk chunk;
     private final OrderedChunks orderedChunks;
 
-    public ChunkRequest(List<HostAddress> hostAddresses, Chunk chunk, OrderedChunks orderedChunks) {
+    public ChunkRequest(HostAddresses hostAddresses, Chunk chunk, OrderedChunks orderedChunks) {
         this.hostAddresses = hostAddresses;
         this.chunk = chunk;
         this.orderedChunks = orderedChunks;
-    }
-
-    private HostAddress getRandomHostAddress() {
-        Random rand = new Random();
-        return this.hostAddresses.get(rand.nextInt(hostAddresses.size()));
     }
 
     public void run() {
@@ -45,9 +36,10 @@ public class ChunkRequest implements Runnable{
     }
 
     private Message sendRequest(Message chunk_request) throws IOException {
-        HostAddress hostAddress = this.getRandomHostAddress();
+        HostAddress hostAddress = hostAddresses.getRandomHostAddress();
         DatagramSocket socket = new DatagramSocket();
 
+        System.out.println("requested chunk " + chunk_request.getChunk_number());
         Message.sendMessage(chunk_request, hostAddress, socket);
 
         return sendMessage(socket);
@@ -57,7 +49,9 @@ public class ChunkRequest implements Runnable{
         try {
             return CompletableFuture.supplyAsync(() -> {
                 try {
-                    return Message.receiveMessage(socket);
+                    Message m = Message.receiveMessage(socket);
+                    System.out.println("received chunk " + m.getChunk_number());
+                    return m;
                 } catch (IOException e) {
                     return null;
                 }

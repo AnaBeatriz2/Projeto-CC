@@ -11,8 +11,9 @@ public class HttpGw {
 
     public void start() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8080), 0);
+        HostAddresses hostAddresses = new HostAddresses();
 
-        server.createContext("/", new ClientHandler());
+        server.createContext("/", new ClientHandler(hostAddresses));
         server.setExecutor(null);
         server.start();
 

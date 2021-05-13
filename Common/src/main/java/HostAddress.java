@@ -4,10 +4,15 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public class HostAddress {
+    private static int nextId = 0;
+
+    private int id;
     private InetAddress address;
     private int port;
 
     public HostAddress(String address, int port) throws UnknownHostException {
+        this.id = nextId++;
+
         this.address = InetAddress.getByName(address);
         this.port = port;
     }
@@ -23,5 +28,9 @@ public class HostAddress {
 
     public int getPort() {
         return port;
+    }
+
+    public int getId() {
+        return id;
     }
 }

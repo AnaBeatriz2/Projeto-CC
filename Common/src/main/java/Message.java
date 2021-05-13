@@ -11,6 +11,12 @@ import java.util.Arrays;
 public class Message implements Serializable {
     public final static int BUFFER_SIZE = 512;
 
+    public static Message newHello() {
+        Message message = new Message();
+        message.query_type = 'h';
+        return message;
+    }
+
     public static Message newFileSizeRequest(String filename) {
         Message message = new Message();
         message.query_type = 'f';
@@ -125,6 +131,7 @@ public class Message implements Serializable {
 
     public byte[] serialize() {
         return switch (query_type) {
+            case 'h' -> serializeHello();
             case 'f' -> serializeFileSizeRequest();
             case 's' -> serializeFileSizeResponse();
             case 'c' -> serializeChunkRequest();
@@ -132,6 +139,10 @@ public class Message implements Serializable {
             case 'e' -> serializeError();
             default -> new byte[0];
         };
+    }
+
+    private byte[] serializeHello() {
+        return Bytes.concat(new byte[]{query_type});
     }
 
     private byte[] serializeFileSizeRequest() {
@@ -163,6 +174,7 @@ public class Message implements Serializable {
 
     public static Message deserialize(byte[] data) {
         return switch (data[0]) {
+            case 'h' -> deserializeHello(data);
             case 'f' -> deserializeFileSizeRequest(data);
             case 's' -> deserializeFileSizeResponse(data);
             case 'c' -> deserializeChunkRequest(data);
@@ -170,6 +182,12 @@ public class Message implements Serializable {
             case 'e' -> deserializeError(data);
             default -> null;
         };
+    }
+
+    private static Message deserializeHello(byte[] data) {
+        Message m = new Message();
+        m.query_type = 'h';
+        return m;
     }
 
     private static Message deserializeFileSizeRequest(byte[] data) {

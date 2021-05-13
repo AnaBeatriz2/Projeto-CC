@@ -6,6 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClientHandler implements HttpHandler {
+    private final HostAddresses hostAddresses;
+
+    public ClientHandler(HostAddresses hostAddresses) {
+        this.hostAddresses = hostAddresses;
+    }
+
     public void handle(HttpExchange httpExchange) throws IOException {
         String filename = null;
 
@@ -44,7 +50,7 @@ public class ClientHandler implements HttpHandler {
     }
 
     private byte[] request(String filename) throws IOException, ClassNotFoundException {
-        FileRequest fileRequest = new FileRequest(filename);
+        FileRequest fileRequest = new FileRequest(hostAddresses, filename);
         OrderedChunks orderedChunks = fileRequest.requestFile();
 
         List<Byte> byteList = new ArrayList<>();

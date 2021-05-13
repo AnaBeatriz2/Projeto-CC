@@ -1,20 +1,18 @@
 import java.io.*;
 import java.net.DatagramSocket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileRequest {
     private static final int MAX_THREADS = 10;
 
-    private final List<HostAddress> hostAddresses;
+    private final HostAddresses hostAddresses;
     private final String filename;
     private final List<Thread> threads;
     private OrderedChunks orderedChunks;
 
-    public FileRequest(String filename) throws UnknownHostException {
-        this.hostAddresses = new ArrayList<>();
-        this.hostAddresses.add(new HostAddress("localhost", 4445));
+    public FileRequest(HostAddresses hostAddresses, String filename) {
+        this.hostAddresses = hostAddresses;
 
         this.filename = filename;
         this.threads = new ArrayList<>();
