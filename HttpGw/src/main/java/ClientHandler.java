@@ -17,9 +17,12 @@ public class ClientHandler implements HttpHandler {
 
         if ("GET".equals(httpExchange.getRequestMethod())) {
             filename = handleGetRequest(httpExchange);
+            System.out.println("Client wants: " + filename);
+            handleResponse(httpExchange, filename);
+        } else {
+            httpExchange.sendResponseHeaders(404, 0);
+            httpExchange.getRequestBody().close();
         }
-
-        handleResponse(httpExchange, filename);
     }
 
     private String handleGetRequest(HttpExchange httpExchange) {
@@ -38,6 +41,7 @@ public class ClientHandler implements HttpHandler {
             httpExchange.sendResponseHeaders(200, response.length);
             outputStream.write(response);
         } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
             httpExchange.sendResponseHeaders(404, 0);
         }
 
@@ -55,18 +59,12 @@ public class ClientHandler implements HttpHandler {
 
         List<Byte> byteList = new ArrayList<>();
 
-        OutputStream out = new FileOutputStream("/tmp/test.pdf");
 
         for (int i = 0; i < orderedChunks.getChunks(); i++) {
-            out.write(orderedChunks.get(i));
-
             for (byte b : orderedChunks.get(i)) {
                 byteList.add(b);
             }
         }
-
-        out.flush();
-        out.close();
 
         byte[] bytes = new byte[byteList.size()];
 

@@ -1,5 +1,10 @@
+import Common.Chunk;
+import Common.HostAddress;
+import Common.Message.Message;
+
 import java.io.*;
 import java.net.DatagramSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +27,7 @@ public class FileRequest {
         Message file_size = getFileSize(hostAddresses.get(0));
 
         if (file_size.getQuery_type() != 'e') {
-            getChunks(file_size.getSize());
+            getChunks(file_size.getFile_size());
         } else {
             System.out.println("Requested file does not exist.");
         }
@@ -42,7 +47,7 @@ public class FileRequest {
     }
 
     private void getChunks(long file_size) {
-        int maxChunkSize = Message.BUFFER_SIZE - filename.length() - 50;
+        int maxChunkSize = Message.BUFFER_SIZE - filename.getBytes().length - 18;
 
         long chunks = file_size / maxChunkSize + 1;
         orderedChunks = new OrderedChunks(chunks);

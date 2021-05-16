@@ -1,3 +1,6 @@
+import Common.HostAddress;
+import Common.Message.Message;
+
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -15,11 +18,12 @@ public class RequestHandler implements Runnable{
     public Message getFileSize(Message input) {
         long size;
         try {
-            size = Files.size(new File(input.getFilename()).toPath());
+            size = Files.size(new File(input.getFile_name()).toPath());
         } catch (IOException e) {
+            e.printStackTrace();
             return Message.newErrorMessage("file-does-not-exist");
         }
-        return Message.newFileSizeResponse(input.getFilename(), size);
+        return Message.newFileSizeResponse(input.getFile_name(), size);
     }
 
     public Message getFileChunk(Message message) {
@@ -28,7 +32,7 @@ public class RequestHandler implements Runnable{
         byte[] buffer = new byte[range];
 
         try {
-            f = new FileInputStream(message.getFilename());
+            f = new FileInputStream(message.getFile_name());
             long s = f.skip(message.getChunk_start());
             if (s != message.getChunk_start()) {
                 System.out.println("Skipped " + s + " of " + message.getChunk_start());
@@ -38,14 +42,16 @@ public class RequestHandler implements Runnable{
                 System.out.println("(" + message.getChunk_number() + ") Read " + r + " of " + range);
             }
         } catch (IOException | IndexOutOfBoundsException e) {
+            e.printStackTrace();
             return Message.newErrorMessage("file-does-not-exist");
         }
 
-        return Message.newChunkResponse(message.getFilename(), message.getChunk_number(), buffer);
+        return Message.newChunkResponse(message.getFile_name(), message.getChunk_number(), buffer);
     }
 
     public void parseInput(Message input, HostAddress hostAddress) throws IOException {
         Message message = switch (input.getQuery_type()) {
+            case 'h' -> Message.newHello();
             case 'f' -> getFileSize(input);
             case 'c' -> getFileChunk(input);
             default -> Message.newErrorMessage("unexpected-request");

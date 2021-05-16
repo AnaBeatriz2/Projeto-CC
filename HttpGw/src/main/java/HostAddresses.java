@@ -1,3 +1,7 @@
+import Common.HostAddress;
+import Common.Message.Message;
+import Common.TimeLimitedCodeBlock;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.UnknownHostException;
@@ -65,6 +69,11 @@ public class HostAddresses {
     public HostAddress getRandomHostAddress() {
         Random generator = new Random();
         Object[] values = activeHostAddresses.values().toArray();
+
+        if (values.length == 0 ) {
+            return null;
+        }
+
         return (HostAddress) values[generator.nextInt(values.length)];
     }
 

@@ -1,3 +1,7 @@
+import Common.Chunk;
+import Common.HostAddress;
+import Common.Message.Message;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +30,9 @@ public class ChunkRequest implements Runnable{
         for (int i = 0; data == null && i < 10; i++) {
             try {
                 data = sendRequest(chunk_request);
-            } catch (IOException ignored) { }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         if (data != null) {
@@ -37,6 +43,11 @@ public class ChunkRequest implements Runnable{
 
     private Message sendRequest(Message chunk_request) throws IOException {
         HostAddress hostAddress = hostAddresses.getRandomHostAddress();
+
+        if (hostAddress == null) {
+            return null;
+        }
+
         DatagramSocket socket = new DatagramSocket();
 
         System.out.println("requested chunk " + chunk_request.getChunk_number());
@@ -53,10 +64,13 @@ public class ChunkRequest implements Runnable{
                     System.out.println("received chunk " + m.getChunk_number());
                     return m;
                 } catch (IOException e) {
+                    //e.printStackTrace();
                     return null;
                 }
             }).get(1, TimeUnit.SECONDS);
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            //e.printStackTrace();
+        }
 
         return null;
     }
