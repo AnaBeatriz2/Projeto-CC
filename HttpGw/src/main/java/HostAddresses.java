@@ -38,14 +38,14 @@ class HostCheck extends TimerTask {
                     Message.receiveMessage(socket);
                     socket.close();
                 } catch (IOException e) {
-                    this.hostAddresses.getActiveHostAddresses().remove(h.getId());
+                    this.hostAddresses.removeActiveHost(h.getId());
                 }
             }, 1, TimeUnit.SECONDS);
 
-            this.hostAddresses.getActiveHostAddresses().put(h.getId(), h);
+            this.hostAddresses.putActiveHost(h);
         }
         catch (TimeoutException e) {
-            this.hostAddresses.getActiveHostAddresses().remove(h.getId());
+            this.hostAddresses.removeActiveHost(h.getId());
         }
     }
 }
@@ -63,7 +63,7 @@ public class HostAddresses {
         this.add("localhost", 4447);
 
         Timer timer = new Timer();
-        timer.schedule(new HostCheck(this), 0, 1000);
+        timer.schedule(new HostCheck(this), 0, 2000);
     }
 
     public HostAddress getRandomHostAddress() {
@@ -91,6 +91,21 @@ public class HostAddresses {
 
     public Map<Integer, HostAddress> getActiveHostAddresses() {
         return activeHostAddresses;
+    }
+
+    public void removeActiveHost(int id) {
+        HostAddress h = this.activeHostAddresses.remove(id);
+
+        if (h != null) {
+            System.out.println("Server " + h.getAddress() + ":"+ h.getPort() + " is down.");
+        }
+    }
+
+    public void putActiveHost(HostAddress h) {
+        if (!this.activeHostAddresses.containsKey(h.getId())) {
+            this.activeHostAddresses.put(h.getId(), h);
+            System.out.println("Server " + h.getAddress() + ":"+ h.getPort() + " is up.");
+        }
     }
 
     public List<HostAddress> getHostAddresses() {
