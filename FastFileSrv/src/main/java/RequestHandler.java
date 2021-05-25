@@ -9,16 +9,18 @@ import java.nio.file.Files;
 public class RequestHandler implements Runnable{
     private final DatagramPacket packet;
     private final DatagramSocket socket;
+    private final String pathPrefix;
 
-    public RequestHandler(DatagramPacket packet, DatagramSocket socket) {
+    public RequestHandler(DatagramPacket packet, DatagramSocket socket, String pathPrefix) {
         this.packet = packet;
         this.socket = socket;
+        this.pathPrefix = pathPrefix;
     }
 
     public Message getFileSize(Message input) {
         long size;
         try {
-            size = Files.size(new File(input.getFile_name()).toPath());
+            size = Files.size(new File(pathPrefix + input.getFile_name()).toPath());
         } catch (IOException e) {
             e.printStackTrace();
             return Message.newErrorMessage("file-does-not-exist");
@@ -32,7 +34,7 @@ public class RequestHandler implements Runnable{
         byte[] buffer = new byte[range];
 
         try {
-            f = new FileInputStream(message.getFile_name());
+            f = new FileInputStream(pathPrefix + message.getFile_name());
             long s = f.skip(message.getChunk_start());
             if (s != message.getChunk_start()) {
                 System.out.println("Skipped " + s + " of " + message.getChunk_start());

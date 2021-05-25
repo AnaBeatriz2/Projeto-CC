@@ -15,20 +15,20 @@ public class FastFileServer {
         this.socket = new DatagramSocket(this.port);
     }
 
-    public void run() throws IOException {
+    public void run(String arg) throws IOException {
         boolean running = true;
         System.out.println("Running on port " + this.port + "...");
 
         while (running) {
             DatagramPacket packet = Message.receivePacket(socket);
 
-            new Thread(new RequestHandler(packet, socket)).start();
+            new Thread(new RequestHandler(packet, socket, arg)).start();
         }
         socket.close();
     }
 
     public static void main(String[] args) throws IOException {
         FastFileServer fastFileServer = new FastFileServer(args[0]);
-        fastFileServer.run();
+        fastFileServer.run(args[1]);
     }
 }

@@ -54,13 +54,14 @@ public class HostAddresses {
     private final Map<Integer, HostAddress> activeHostAddresses;
     private final List<HostAddress> hostAddresses;
 
-    public HostAddresses() {
+    public HostAddresses(String[] args) {
         this.activeHostAddresses = new HashMap<>();
         this.hostAddresses = new ArrayList<>();
 
-        this.add("localhost", 4445);
-        this.add("localhost", 4446);
-        this.add("localhost", 4447);
+        for(String arg : args) {
+            String[] host = arg.split(":");
+            this.add(host[0], Integer.parseInt(host[1]));
+        }
 
         Timer timer = new Timer();
         timer.schedule(new HostCheck(this), 0, 2000);
